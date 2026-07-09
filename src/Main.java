@@ -21,6 +21,8 @@ public class Main {
 
         String filePath ="";
         int topEndPointMax = 10;
+        int startHour = 0; 
+        int endHour = 23;
         for (int i = 0; i < args.length; i++) {
             if(args[i].equals("--top")){
                 if (i + 1 < args.length) {
@@ -35,9 +37,31 @@ public class Main {
                     System.err.println("Error: --top requires a number. Usage: --top <number>");
                     System.exit(1);
                 }
-            }else{
+            } else if (args[i].equals("--start")) {
+                if (i + 1 < args.length) {
+                    startHour = Integer.parseInt(args[i + 1]);
+                    if (startHour < 0 || startHour > 23) {
+                        System.err.println("Error: Start hour must be between 0 and 23.");
+                        System.exit(1);
+                    }
+                    i++;
+                }
+            } else if (args[i].equals("--end")) {
+                if (i + 1 < args.length) {
+                    endHour = Integer.parseInt(args[i + 1]);
+                    if (endHour < 0 || endHour > 23) {
+                        System.err.println("Error: End hour must be between 0 and 23.");
+                        System.exit(1);
+                    }
+                    i++;
+                }
+            } else {
                 filePath = args[i];
             }
+        }
+        if (startHour > endHour) {
+            System.err.println("Error: Start hour cannot be greater than End hour.");
+            System.exit(1);
         }
         File logFile = new File(filePath);
 
@@ -124,7 +148,15 @@ public class Main {
                     invalidRequests++;
                     continue;
                 }
+
+                //for limiting to start hour and end hour given by user
+                int hour = Integer.parseInt(rawDate.substring(12, 14));
+                if (hour < startHour || hour > endHour) {
+                    continue;
+                }
+
                 validRequests++;
+
                 //number of unique ips
                 uniqueIps.add(rawIp);
 
@@ -144,7 +176,7 @@ public class Main {
                 pathCounter.put(endpointPath, pathCounter.getOrDefault(endpointPath, 0L) + 1);
 
                 //number of requests per hour
-                int hour = Integer.parseInt(rawDate.substring(12, 14));
+
                 numberOfRequestsPerHour[hour]++;
 
                 //looking for Suspicious Activity
