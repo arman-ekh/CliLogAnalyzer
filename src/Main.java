@@ -47,6 +47,8 @@ public class Main {
             long invalidIps = 0;
             long invalidDates = 0;
             long invalidRequests = 0;
+            long numberOfErrors4xx = 0;
+            long numberOfErrors5xx = 0;
 
             Pattern structPat = Pattern.compile(LogRegex.STRUCTURE.getPattern());
             Pattern ipPat = Pattern.compile(LogRegex.IP.getPattern());
@@ -82,37 +84,37 @@ public class Main {
                     continue;
                 }
 
-                uniqueIps.add(rawIp);
-
-
                 if (!datePat.matcher(rawDate).matches()) {
                     invalidDates++;
                     continue;
                 }
 
-
                 if (!reqPat.matcher(rawRequest).matches()) {
                     invalidRequests++;
                     continue;
                 }
+                //number of unique ips
+                uniqueIps.add(rawIp);
 
+                //number of Errors 4xx or 5xx
+                if(rawStatus.length() == 3){
+                    if(rawStatus.charAt(0) == '4'){
+                        numberOfErrors4xx++;
+                    } else if (rawStatus.charAt(0) == '5') {
+                        numberOfErrors5xx++;
+                    }
+                }
 
-
+                //top 10 most visited endpoints
                 String[] requestParts = rawRequest.split(" ");
                 String endpointPath = requestParts[1];
 
                 pathCounter.put(endpointPath, pathCounter.getOrDefault(endpointPath, 0L) + 1);
-
-
-
-
-
-
             }
 
-            System.out.println("Total lines : " + totalLines);
-            System.out.println("Malformed lines : " + malformedLines);
-            System.out.println("Number of unique Ips : "+uniqueIps.size());
+            System.out.println("\nTotal lines : " + totalLines);
+            System.out.println("\nMalformed lines : " + malformedLines);
+            System.out.println("\nNumber of unique Ips : "+uniqueIps.size());
             System.out.println("\n--- Top 10 Most Visited Endpoints ---");
             System.out.printf("%-10s | %s%n", "Requests", "Endpoint Path");
             System.out.println("--------------------------------------------------");
@@ -121,7 +123,10 @@ public class Main {
                     .sorted((e1, e2) -> Long.compare(e2.getValue(), e1.getValue()))
                     .limit(10)
                     .forEach(e -> System.out.printf("%,-10d | %s%n", e.getValue(), e.getKey()));
-
+            double errorPercentage4x = (double) numberOfErrors4xx / (totalLines - malformedLines);
+            System.out.println("\nPercentage of errors 4xx : " + errorPercentage4x * 100 +"%" );
+            double errorPercentage5x = (double) numberOfErrors5xx / (totalLines - malformedLines);
+            System.out.println("\nPercentage of errors 5xx : " + errorPercentage5x * 100 +"%" );
 
         } catch (IOException e) {
             throw new RuntimeException(e);
