@@ -1,15 +1,14 @@
 import enums.LogRegex;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
+import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.zip.GZIPInputStream;
 
 public class Main {
     public static void main(String[] args) {
@@ -63,6 +62,7 @@ public class Main {
             System.err.println("Error: Start hour cannot be greater than End hour.");
             System.exit(1);
         }
+
         File logFile = new File(filePath);
 
         if (!logFile.exists()) {
@@ -80,11 +80,15 @@ public class Main {
             System.exit(1);
         }
 
-
-
         System.out.println("File is ready to analyze");
 
-        try (BufferedReader br = new BufferedReader(new FileReader(logFile))){
+        try {
+            InputStream fileStream = new FileInputStream(logFile);
+
+            if (logFile.getName().endsWith(".gz")) {
+                fileStream = new GZIPInputStream(fileStream);
+            }
+            BufferedReader br = new BufferedReader(new InputStreamReader(fileStream, StandardCharsets.UTF_8));
             String line = "";
             long totalLines = 0;
 
@@ -176,7 +180,6 @@ public class Main {
                 pathCounter.put(endpointPath, pathCounter.getOrDefault(endpointPath, 0L) + 1);
 
                 //number of requests per hour
-
                 numberOfRequestsPerHour[hour]++;
 
                 //looking for Suspicious Activity
@@ -204,8 +207,8 @@ public class Main {
                     .forEach(e -> System.out.printf("%,-10d | %s%n", e.getValue(), e.getKey()));
 
             if(validRequests > 0){
-                double errorPercentage4x = (double) numberOfErrors4xx / (totalLines - malformedLines)* 100;
-                double errorPercentage5x = (double) numberOfErrors5xx / (totalLines - malformedLines) * 100;
+                double errorPercentage4x = (double) numberOfErrors4xx / (validRequests)* 100;
+                double errorPercentage5x = (double) numberOfErrors5xx / (validRequests) * 100;
                 double totalErrorPercentage = ((double) (numberOfErrors4xx + numberOfErrors5xx) / validRequests) * 100;
                 System.out.printf("\n4xx Client Errors : %,d (%.2f%%)%n", numberOfErrors4xx, errorPercentage4x);
                 System.out.printf("5xx Server Errors : %,d (%.2f%%)%n", numberOfErrors5xx, errorPercentage5x);
