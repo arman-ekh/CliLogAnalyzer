@@ -51,6 +51,7 @@ public class Main {
             long numberOfErrors5xx = 0;
             long validRequests = 0;
             long[] numberOfRequestsPerHour = new long[24];
+            long[] errors5xxPerHour = new long[24];
 
             Pattern structPat = Pattern.compile(LogRegex.STRUCTURE.getPattern());
             Pattern ipPat = Pattern.compile(LogRegex.IP.getPattern());
@@ -63,6 +64,8 @@ public class Main {
 
             Map<String, Long> bruteForceTracker = new HashMap<>();
             final long SUSPICIOUS_THRESHOLD = 50;
+
+            final double SPIKE_MULTIPLIER = 1.8;
 
             while((line = br.readLine()) != null){
                 if(line.isEmpty()){
@@ -125,6 +128,11 @@ public class Main {
                 if (endpointPath.equals("/login") && rawStatus.equals("401")) {
                     bruteForceTracker.put(rawIp, bruteForceTracker.getOrDefault(rawIp, 0L) + 1);
                 }
+
+                //looking for high rate of 5xx errors
+                if(rawStatus.length() == 3 && rawStatus.charAt(0) == '5'){
+                     errors5xxPerHour[hour]++;
+                }
             }
 
             System.out.println("\nTotal lines : " + totalLines);
@@ -171,9 +179,55 @@ public class Main {
             }
             System.out.println("--------------------------------------------------");
 
+
+            int numberOfHoursWithActivity = 0;
+            double[] averageErrors5xxPerHour = new double[24];
+
+            for(int h = 0; h < errors5xxPerHour.length;h++){
+                long errorCount = errors5xxPerHour[h];
+                long totalCount = numberOfRequestsPerHour[h];
+
+                if(totalCount == 0){
+                    totalCount = 1;
+                }else{
+                    numberOfHoursWithActivity++;
+                }
+                double errorPercentage = (double) errorCount / totalCount * 100;
+                averageErrors5xxPerHour[h] = errorPercentage;
+            }
+
+            double average5xxPerHour = 0;
+            for(int h = 0 ; h < averageErrors5xxPerHour.length ; h++){
+                average5xxPerHour+=averageErrors5xxPerHour[h];
+            }
+
+            if (numberOfHoursWithActivity >= 1) {
+                average5xxPerHour /= numberOfHoursWithActivity;
+
+
+                for (int h = 0; h < averageErrors5xxPerHour.length; h++) {
+                    if (averageErrors5xxPerHour[h] > SPIKE_MULTIPLIER * average5xxPerHour && errors5xxPerHour[h] > 5) {
+
+                        System.out.println("\n[ANOMALY DETECTED] HTTP 5xx Error Spike");
+                        System.out.printf("   Time Window       : %02d:00 - %02d:00%n", h, (h + 1) % 24);
+                        System.out.printf("   Current Error Rate: %.2f%%%n", averageErrors5xxPerHour[h]);
+                        System.out.printf("   Baseline Average  : %.2f%% (Trigger: > %.2f%%)%n",
+                                average5xxPerHour, (average5xxPerHour * SPIKE_MULTIPLIER));
+                        System.out.printf("   Raw Volume        : %,d errors out of %,d total requests%n",
+                                errors5xxPerHour[h], numberOfRequestsPerHour[h]);
+                        System.out.println("   ------------------------------------------------");
+                    }
+                }
+            }
+
+
+
+
+
+
             for (Map.Entry<String, Long> entry : bruteForceTracker.entrySet()) {
                 if (entry.getValue() > SUSPICIOUS_THRESHOLD) {
-                    System.out.printf("ALERT: IP [%s] detected with %,d failed login attempts!%n",
+                    System.out.printf("\nALERT: IP [%s] detected with %,d failed login attempts!%n",
                             entry.getKey(), entry.getValue());
                 }
             }
