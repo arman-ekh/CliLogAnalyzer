@@ -19,7 +19,26 @@ public class Main {
             System.exit(1);
         }
 
-        String filePath = args[0];
+        String filePath ="";
+        int topEndPointMax = 10;
+        for (int i = 0; i < args.length; i++) {
+            if(args[i].equals("--top")){
+                if (i + 1 < args.length) {
+                    try {
+                        topEndPointMax = Integer.parseInt(args[i + 1]);
+                        i++;
+                    } catch (NumberFormatException e) {
+                        System.err.println("Error: Invalid number for --top. Please provide an integer.");
+                        System.exit(1);
+                    }
+                }else {
+                    System.err.println("Error: --top requires a number. Usage: --top <number>");
+                    System.exit(1);
+                }
+            }else{
+                filePath = args[i];
+            }
+        }
         File logFile = new File(filePath);
 
         if (!logFile.exists()) {
@@ -37,11 +56,15 @@ public class Main {
             System.exit(1);
         }
 
+
+
         System.out.println("File is ready to analyze");
 
         try (BufferedReader br = new BufferedReader(new FileReader(logFile))){
             String line = "";
             long totalLines = 0;
+
+
 
             long malformedLines = 0;
             long invalidIps = 0;
@@ -139,13 +162,13 @@ public class Main {
             System.out.println("\nTotal valid logs : " + validRequests);
             System.out.println("\nMalformed lines : " + malformedLines);
             System.out.println("\nNumber of unique Ips : "+uniqueIps.size());
-            System.out.println("\n--- Top 10 Most Visited Endpoints ---");
+            System.out.println("\n--- Top " + topEndPointMax+" Most Visited Endpoints ---");
             System.out.printf("%-10s | %s%n", "Requests", "Endpoint Path");
             System.out.println("--------------------------------------------------");
 
             pathCounter.entrySet().stream()
                     .sorted((e1, e2) -> Long.compare(e2.getValue(), e1.getValue()))
-                    .limit(10)
+                    .limit(topEndPointMax)
                     .forEach(e -> System.out.printf("%,-10d | %s%n", e.getValue(), e.getKey()));
 
             if(validRequests > 0){
