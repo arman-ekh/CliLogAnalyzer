@@ -115,6 +115,8 @@ public class Main {
                 pathCounter.put(endpointPath, pathCounter.getOrDefault(endpointPath, 0L) + 1);
 
                 //number of requests per hour
+                int hour = Integer.parseInt(rawDate.substring(12, 14));
+                numberOfRequestsPerHour[hour]++;
             }
 
             System.out.println("\nTotal lines : " + totalLines);
@@ -134,10 +136,32 @@ public class Main {
                 double errorPercentage4x = (double) numberOfErrors4xx / (totalLines - malformedLines)* 100;
                 double errorPercentage5x = (double) numberOfErrors5xx / (totalLines - malformedLines) * 100;
                 double totalErrorPercentage = ((double) (numberOfErrors4xx + numberOfErrors5xx) / validRequests) * 100;
-                System.out.printf("4xx Client Errors : %,d (%.2f%%)%n", numberOfErrors4xx, errorPercentage4x);
+                System.out.printf("\n4xx Client Errors : %,d (%.2f%%)%n", numberOfErrors4xx, errorPercentage4x);
                 System.out.printf("5xx Server Errors : %,d (%.2f%%)%n", numberOfErrors5xx, errorPercentage5x);
                 System.out.printf("Total Error Rate  : %,d (%.2f%%)%n", (numberOfErrors4xx + numberOfErrors5xx), totalErrorPercentage);
             }
+
+            System.out.println("\n--- Hourly Traffic Distribution ---");
+            System.out.printf("%-6s | %-10s | Histogram%n", "Hour", "Requests");
+            System.out.println("--------------------------------------------------");
+
+            long maxRequests = 0;
+            for (long count : numberOfRequestsPerHour) {
+                if (count > maxRequests) {
+                    maxRequests = count;
+                }
+            }
+            if (maxRequests == 0) maxRequests = 1;
+
+            for (int h = 0; h < numberOfRequestsPerHour.length; h++) {
+                long count = numberOfRequestsPerHour[h];
+
+                int barLength = (int) (((double) count / maxRequests) * 30);
+                String bar = "#".repeat(barLength);
+
+                System.out.printf("%02d:00  | %-10s | %s%n", h, String.format("%,d", count), bar);
+            }
+            System.out.println("--------------------------------------------------");
 
         } catch (IOException e) {
             throw new RuntimeException(e);
