@@ -49,6 +49,8 @@ public class Main {
             long invalidRequests = 0;
             long numberOfErrors4xx = 0;
             long numberOfErrors5xx = 0;
+            long validRequests = 0;
+            long[] numberOfRequestsPerHour = new long[24];
 
             Pattern structPat = Pattern.compile(LogRegex.STRUCTURE.getPattern());
             Pattern ipPat = Pattern.compile(LogRegex.IP.getPattern());
@@ -93,6 +95,7 @@ public class Main {
                     invalidRequests++;
                     continue;
                 }
+                validRequests++;
                 //number of unique ips
                 uniqueIps.add(rawIp);
 
@@ -110,9 +113,12 @@ public class Main {
                 String endpointPath = requestParts[1];
 
                 pathCounter.put(endpointPath, pathCounter.getOrDefault(endpointPath, 0L) + 1);
+
+                //number of requests per hour
             }
 
             System.out.println("\nTotal lines : " + totalLines);
+            System.out.println("\nTotal valid logs : " + validRequests);
             System.out.println("\nMalformed lines : " + malformedLines);
             System.out.println("\nNumber of unique Ips : "+uniqueIps.size());
             System.out.println("\n--- Top 10 Most Visited Endpoints ---");
@@ -123,10 +129,15 @@ public class Main {
                     .sorted((e1, e2) -> Long.compare(e2.getValue(), e1.getValue()))
                     .limit(10)
                     .forEach(e -> System.out.printf("%,-10d | %s%n", e.getValue(), e.getKey()));
-            double errorPercentage4x = (double) numberOfErrors4xx / (totalLines - malformedLines);
-            System.out.println("\nPercentage of errors 4xx : " + errorPercentage4x * 100 +"%" );
-            double errorPercentage5x = (double) numberOfErrors5xx / (totalLines - malformedLines);
-            System.out.println("\nPercentage of errors 5xx : " + errorPercentage5x * 100 +"%" );
+
+            if(validRequests > 0){
+                double errorPercentage4x = (double) numberOfErrors4xx / (totalLines - malformedLines)* 100;
+                double errorPercentage5x = (double) numberOfErrors5xx / (totalLines - malformedLines) * 100;
+                double totalErrorPercentage = ((double) (numberOfErrors4xx + numberOfErrors5xx) / validRequests) * 100;
+                System.out.printf("4xx Client Errors : %,d (%.2f%%)%n", numberOfErrors4xx, errorPercentage4x);
+                System.out.printf("5xx Server Errors : %,d (%.2f%%)%n", numberOfErrors5xx, errorPercentage5x);
+                System.out.printf("Total Error Rate  : %,d (%.2f%%)%n", (numberOfErrors4xx + numberOfErrors5xx), totalErrorPercentage);
+            }
 
         } catch (IOException e) {
             throw new RuntimeException(e);
