@@ -61,6 +61,9 @@ public class Main {
             Set<String> uniqueIps = new HashSet<>();
             Map<String, Long> pathCounter = new HashMap<>();
 
+            Map<String, Long> bruteForceTracker = new HashMap<>();
+            final long SUSPICIOUS_THRESHOLD = 50;
+
             while((line = br.readLine()) != null){
                 if(line.isEmpty()){
                     continue;
@@ -117,6 +120,11 @@ public class Main {
                 //number of requests per hour
                 int hour = Integer.parseInt(rawDate.substring(12, 14));
                 numberOfRequestsPerHour[hour]++;
+
+                //looking for Suspicious Activity
+                if (endpointPath.equals("/login") && rawStatus.equals("401")) {
+                    bruteForceTracker.put(rawIp, bruteForceTracker.getOrDefault(rawIp, 0L) + 1);
+                }
             }
 
             System.out.println("\nTotal lines : " + totalLines);
@@ -162,6 +170,13 @@ public class Main {
                 System.out.printf("%02d:00  | %-10s | %s%n", h, String.format("%,d", count), bar);
             }
             System.out.println("--------------------------------------------------");
+
+            for (Map.Entry<String, Long> entry : bruteForceTracker.entrySet()) {
+                if (entry.getValue() > SUSPICIOUS_THRESHOLD) {
+                    System.out.printf("ALERT: IP [%s] detected with %,d failed login attempts!%n",
+                            entry.getKey(), entry.getValue());
+                }
+            }
 
         } catch (IOException e) {
             throw new RuntimeException(e);
