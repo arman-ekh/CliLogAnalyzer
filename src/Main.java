@@ -27,6 +27,10 @@ public class Main {
                 if (i + 1 < args.length) {
                     try {
                         topEndPointMax = Integer.parseInt(args[i + 1]);
+                        if(topEndPointMax <= 0){
+                            System.err.println("Error:--top command expects a positive integer");
+                            System.exit(1);
+                        }
                         i++;
                     } catch (NumberFormatException e) {
                         System.err.println("Error: Invalid number for --top. Please provide an integer.");
